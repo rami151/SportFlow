@@ -1,0 +1,157 @@
+{
+  "info": {
+    "_postman_id": "competition-service-sportflow-api",
+    "name": "SportFlow - Competition Service",
+    "description": "Postman collection for SportFlow Competition & Registration REST API (Phase 2 - Task 2)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Competitions",
+      "item": [
+        {
+          "name": "List All Competitions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/competitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "competitions"]
+            }
+          }
+        },
+        {
+          "name": "Create Competition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tunis Judo Open 2026\",\n  \"sport\": \"Judo\",\n  \"location\": \"Palais des Sports, Tunis\",\n  \"date\": \"2026-12-15T09:00:00Z\",\n  \"category\": \"SENIOR\",\n  \"maxParticipants\": 32\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/competitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "competitions"]
+            }
+          }
+        },
+        {
+          "name": "Get Competition By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/competitions/{{competitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "competitions", "{{competitionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Competition",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tunis Judo Open 2026 (Updated)\",\n  \"sport\": \"Judo\",\n  \"location\": \"Radès Arena, Tunis\",\n  \"date\": \"2026-12-16T09:00:00Z\",\n  \"category\": \"SENIOR\",\n  \"maxParticipants\": 64,\n  \"status\": \"OPEN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/competitions/{{competitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "competitions", "{{competitionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Competition",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/competitions/{{competitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "competitions", "{{competitionId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrations",
+      "item": [
+        {
+          "name": "Register Athlete for Competition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"athleteId\": \"a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d\",\n  \"athleteAge\": 24,\n  \"athleteWeight\": 73.0,\n  \"licenseNumber\": \"LIC-TUN-2026-001\",\n  \"category\": \"SENIOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/competitions/{{competitionId}}/registrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "competitions", "{{competitionId}}", "registrations"]
+            }
+          }
+        },
+        {
+          "name": "List Registrations for Competition",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/competitions/{{competitionId}}/registrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "competitions", "{{competitionId}}", "registrations"]
+            }
+          }
+        },
+        {
+          "name": "Get Registration By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/registrations/{{registrationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registrations", "{{registrationId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8084"
+    },
+    {
+      "key": "competitionId",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "registrationId",
+      "value": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}
