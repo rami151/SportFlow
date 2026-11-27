@@ -1,0 +1,16 @@
+# Dhia (Person A) - Gateway, Security, REST, SOAP
+/api-gateway/ @Dhia-Eddine-Karbia
+/user-service/ @Dhia-Eddine-Karbia
+/club-service/ @Dhia-Eddine-Karbia
+/athlete-service/ @Dhia-Eddine-Karbia
+/federation-service/ @Dhia-Eddine-Karbia
+/contracts/wsdl/ @Dhia-Eddine-Karbia
+/contracts/openapi/ @Dhia-Eddine-Karbia
+
+# Rami (Person B) - Integration hub, gRPC, RabbitMQ
+/competition-service/ @rami151
+/eligibility-service/ @rami151
+/live-service/ @rami151
+/notification-stats-service/ @rami151
+/contracts/proto/ @rami151
+/contracts/events/ @rami151
