@@ -8,6 +8,18 @@ spring:
 grpc:
   server:
     port: ${GRPC_PORT:9096}
+    reflection-service-enabled: true
+
+eligibility:
+  rules:
+    min-age: 6
+    max-age: 80
+    min-weight: 20.0
+    max-weight: 200.0
+    junior-max-age: 17
+    senior-min-age: 18
+    senior-max-age: 35
+    veteran-min-age: 36
 
 management:
   endpoints:
