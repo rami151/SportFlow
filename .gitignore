@@ -1,0 +1,29 @@
+
+# Maven
+target/
+*.class
+
+# Java
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.settings/
+.project
+.classpath
+
+# Environment variables
+.env
+.env.*
+
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
