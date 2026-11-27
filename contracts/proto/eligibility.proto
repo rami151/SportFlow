@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package sportflow.eligibility;
+
+option java_multiple_files = true;
+option java_package = "com.sportflow.eligibility.grpc";
+
+// Design decision: Eligibility is stateless and receives athlete data in the request;
+// it does not call Athlete Service.
+service EligibilityService {
+  rpc CheckEligibility (EligibilityRequest) returns (EligibilityResponse);
+}
+
+message EligibilityRequest {
+  string athlete_id = 1;
+  string competition_id = 2;
+  int32 athlete_age = 3;
+  double athlete_weight = 4;
+  string license_number = 5;
+  string category = 6;
+}
+
+message EligibilityResponse {
+  bool eligible = 1;
+  // Possible reasons: OK, LICENSE_EXPIRED, WEIGHT_OUT_OF_RANGE, AGE_OUT_OF_RANGE, CATEGORY_MISMATCH
+  string reason = 2;
+}

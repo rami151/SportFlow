@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package sportflow.live;
+
+option java_multiple_files = true;
+option java_package = "com.sportflow.live.grpc";
+
+service LiveCompetitionService {
+  rpc Subscribe (SubscribeRequest) returns (stream LiveEvent);
+}
+
+message SubscribeRequest {
+  string competition_id = 1;
+}
+
+enum EventType {
+  START = 0;
+  SCORE_UPDATE = 1;
+  END = 2;
+}
+
+message LiveEvent {
+  string competition_id = 1;
+  EventType type = 2;
+  string athlete_a = 3;
+  string athlete_b = 4;
+  int32 score_a = 5;
+  int32 score_b = 6;
+  int64 timestamp = 7;
+}
