@@ -44,6 +44,20 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage()));
     }
 
+    @ExceptionHandler(EligibilityServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleEligibilityUnavailable(EligibilityServiceUnavailableException ex) {
+        log.error("Eligibility service unavailable: {}", ex.getMessage());
+        List<String> details = ex.getRegistrationId() != null
+                ? List.of("registrationId: " + ex.getRegistrationId())
+                : List.of();
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "Eligibility service is unavailable. Registration has been retained as PENDING.",
+                        details
+                ));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
