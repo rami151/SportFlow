@@ -215,6 +215,27 @@ class CompetitionControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/competitions/{id}/registrations returns 503 when eligibility service unavailable")
+    void registerAthlete_ServiceUnavailable() throws Exception {
+        UUID competitionId = UUID.randomUUID();
+        UUID regId = UUID.randomUUID();
+        RegistrationCreateRequest request = new RegistrationCreateRequest(
+                UUID.randomUUID(), 25, 75.0, "LIC-12345", "SENIOR"
+        );
+
+        when(competitionService.registerAthlete(eq(competitionId), any(RegistrationCreateRequest.class)))
+                .thenThrow(new com.sportflow.competition.exception.EligibilityServiceUnavailableException("Service down", regId));
+
+        mockMvc.perform(post("/api/competitions/{id}/registrations", competitionId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.message").value("Eligibility service is unavailable. Registration has been retained as PENDING."))
+                .andExpect(jsonPath("$.details[0]").value("registrationId: " + regId));
+    }
+
+    @Test
     @DisplayName("GET /api/competitions/{id}/registrations returns list")
     void getRegistrationsForCompetition() throws Exception {
         UUID competitionId = UUID.randomUUID();
