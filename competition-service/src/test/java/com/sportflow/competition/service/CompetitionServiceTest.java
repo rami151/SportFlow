@@ -1,5 +1,7 @@
 package com.sportflow.competition.service;
 
+import com.sportflow.competition.client.EligibilityCheckResult;
+import com.sportflow.competition.client.EligibilityClient;
 import com.sportflow.competition.dto.*;
 import com.sportflow.competition.entity.*;
 import com.sportflow.competition.exception.*;
@@ -32,6 +34,9 @@ class CompetitionServiceTest {
 
     @Mock
     private RegistrationRepository registrationRepository;
+
+    @Mock
+    private EligibilityClient eligibilityClient;
 
     @InjectMocks
     private CompetitionService competitionService;
@@ -142,7 +147,7 @@ class CompetitionServiceTest {
     }
 
     @Nested
-    @DisplayName("Registration Business Rules")
+    @DisplayName("Registration Business Rules and Eligibility Flow")
     class RegistrationRulesTests {
 
         private UUID athleteId;
@@ -157,26 +162,81 @@ class CompetitionServiceTest {
         }
 
         @Test
-        @DisplayName("Valid registration is saved with status PENDING")
-        void registerAthlete_Success() {
+        @DisplayName("Eligible athlete registration transitions from PENDING to ACCEPTED")
+        void registerAthlete_Eligible_Accepted() {
             when(competitionRepository.findById(competitionId)).thenReturn(Optional.of(competition));
             when(registrationRepository.existsByCompetitionIdAndAthleteId(competitionId, athleteId)).thenReturn(false);
             when(registrationRepository.countByCompetitionIdAndStatusNot(competitionId, RegistrationStatus.REJECTED)).thenReturn(10L);
 
-            Registration savedReg = new Registration(
+            Registration pendingReg = new Registration(
                     UUID.randomUUID(), competitionId, athleteId, 25, 73.5, "LIC-12345", "SENIOR",
                     RegistrationStatus.PENDING, null, Instant.now()
             );
-            when(registrationRepository.save(any(Registration.class))).thenReturn(savedReg);
+            when(registrationRepository.saveAndFlush(any(Registration.class))).thenReturn(pendingReg);
+            when(eligibilityClient.checkEligibility(athleteId, competitionId, 25, 73.5, "LIC-12345", "SENIOR"))
+                    .thenReturn(EligibilityCheckResult.success());
+            when(registrationRepository.save(any(Registration.class))).thenAnswer(inv -> inv.getArgument(0));
 
             RegistrationResponse response = competitionService.registerAthlete(competitionId, regRequest);
 
             assertThat(response).isNotNull();
             assertThat(response.competitionId()).isEqualTo(competitionId);
             assertThat(response.athleteId()).isEqualTo(athleteId);
-            assertThat(response.status()).isEqualTo(RegistrationStatus.PENDING);
+            assertThat(response.status()).isEqualTo(RegistrationStatus.ACCEPTED);
             assertThat(response.rejectionReason()).isNull();
+
+            verify(registrationRepository).saveAndFlush(any(Registration.class));
+            verify(eligibilityClient).checkEligibility(athleteId, competitionId, 25, 73.5, "LIC-12345", "SENIOR");
             verify(registrationRepository).save(any(Registration.class));
+        }
+
+        @Test
+        @DisplayName("Ineligible athlete registration transitions from PENDING to REJECTED with reason")
+        void registerAthlete_Ineligible_Rejected() {
+            when(competitionRepository.findById(competitionId)).thenReturn(Optional.of(competition));
+            when(registrationRepository.existsByCompetitionIdAndAthleteId(competitionId, athleteId)).thenReturn(false);
+            when(registrationRepository.countByCompetitionIdAndStatusNot(competitionId, RegistrationStatus.REJECTED)).thenReturn(10L);
+
+            Registration pendingReg = new Registration(
+                    UUID.randomUUID(), competitionId, athleteId, 25, 73.5, "LIC-12345", "SENIOR",
+                    RegistrationStatus.PENDING, null, Instant.now()
+            );
+            when(registrationRepository.saveAndFlush(any(Registration.class))).thenReturn(pendingReg);
+            when(eligibilityClient.checkEligibility(athleteId, competitionId, 25, 73.5, "LIC-12345", "SENIOR"))
+                    .thenReturn(EligibilityCheckResult.failure("WEIGHT_OUT_OF_RANGE"));
+            when(registrationRepository.save(any(Registration.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            RegistrationResponse response = competitionService.registerAthlete(competitionId, regRequest);
+
+            assertThat(response).isNotNull();
+            assertThat(response.status()).isEqualTo(RegistrationStatus.REJECTED);
+            assertThat(response.rejectionReason()).isEqualTo("WEIGHT_OUT_OF_RANGE");
+        }
+
+        @Test
+        @DisplayName("Eligibility service down: retains registration as PENDING and throws 503 exception")
+        void registerAthlete_EligibilityDown_RetainsPending() {
+            UUID regId = UUID.randomUUID();
+            when(competitionRepository.findById(competitionId)).thenReturn(Optional.of(competition));
+            when(registrationRepository.existsByCompetitionIdAndAthleteId(competitionId, athleteId)).thenReturn(false);
+            when(registrationRepository.countByCompetitionIdAndStatusNot(competitionId, RegistrationStatus.REJECTED)).thenReturn(10L);
+
+            Registration pendingReg = new Registration(
+                    regId, competitionId, athleteId, 25, 73.5, "LIC-12345", "SENIOR",
+                    RegistrationStatus.PENDING, null, Instant.now()
+            );
+            when(registrationRepository.saveAndFlush(any(Registration.class))).thenReturn(pendingReg);
+            when(eligibilityClient.checkEligibility(athleteId, competitionId, 25, 73.5, "LIC-12345", "SENIOR"))
+                    .thenThrow(new EligibilityServiceUnavailableException("Connection refused", null));
+
+            assertThatThrownBy(() -> competitionService.registerAthlete(competitionId, regRequest))
+                    .isInstanceOf(EligibilityServiceUnavailableException.class)
+                    .hasMessageContaining("retained as PENDING")
+                    .satisfies(ex -> assertThat(((EligibilityServiceUnavailableException) ex).getRegistrationId()).isEqualTo(regId));
+
+            assertThat(pendingReg.getStatus()).isEqualTo(RegistrationStatus.PENDING);
+            assertThat(pendingReg.getRejectionReason()).isEqualTo("ELIGIBILITY_SERVICE_UNAVAILABLE");
+            verify(registrationRepository).save(pendingReg);
         }
 
         @Test
@@ -189,7 +249,8 @@ class CompetitionServiceTest {
                     .isInstanceOf(CompetitionClosedException.class)
                     .hasMessageContaining("CLOSED");
 
-            verify(registrationRepository, never()).save(any());
+            verify(registrationRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(eligibilityClient);
         }
 
         @Test
@@ -202,7 +263,8 @@ class CompetitionServiceTest {
                     .isInstanceOf(CompetitionClosedException.class)
                     .hasMessageContaining("FINISHED");
 
-            verify(registrationRepository, never()).save(any());
+            verify(registrationRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(eligibilityClient);
         }
 
         @Test
@@ -215,7 +277,8 @@ class CompetitionServiceTest {
                     .isInstanceOf(DuplicateRegistrationException.class)
                     .hasMessageContaining("already registered");
 
-            verify(registrationRepository, never()).save(any());
+            verify(registrationRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(eligibilityClient);
         }
 
         @Test
@@ -230,7 +293,8 @@ class CompetitionServiceTest {
                     .isInstanceOf(CompetitionFullException.class)
                     .hasMessageContaining("max capacity");
 
-            verify(registrationRepository, never()).save(any());
+            verify(registrationRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(eligibilityClient);
         }
 
         @Test
@@ -240,6 +304,7 @@ class CompetitionServiceTest {
 
             assertThatThrownBy(() -> competitionService.registerAthlete(competitionId, regRequest))
                     .isInstanceOf(ResourceNotFoundException.class);
+            verifyNoInteractions(eligibilityClient);
         }
 
         @Test
@@ -248,7 +313,7 @@ class CompetitionServiceTest {
             UUID regId = UUID.randomUUID();
             Registration reg = new Registration(
                     regId, competitionId, athleteId, 25, 73.5, "LIC-12345", "SENIOR",
-                    RegistrationStatus.PENDING, null, Instant.now()
+                    RegistrationStatus.ACCEPTED, null, Instant.now()
             );
             when(registrationRepository.findById(regId)).thenReturn(Optional.of(reg));
 
@@ -263,7 +328,7 @@ class CompetitionServiceTest {
         void getRegistrationsForCompetition_Success() {
             when(competitionRepository.existsById(competitionId)).thenReturn(true);
             when(registrationRepository.findByCompetitionId(competitionId)).thenReturn(List.of(
-                    new Registration(UUID.randomUUID(), competitionId, athleteId, 25, 73.5, "LIC-1", "SENIOR", RegistrationStatus.PENDING, null, Instant.now())
+                    new Registration(UUID.randomUUID(), competitionId, athleteId, 25, 73.5, "LIC-1", "SENIOR", RegistrationStatus.ACCEPTED, null, Instant.now())
             ));
 
             List<RegistrationResponse> list = competitionService.getRegistrationsForCompetition(competitionId);

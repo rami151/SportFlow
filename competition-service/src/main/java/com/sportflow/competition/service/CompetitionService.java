@@ -1,5 +1,7 @@
 package com.sportflow.competition.service;
 
+import com.sportflow.competition.client.EligibilityCheckResult;
+import com.sportflow.competition.client.EligibilityClient;
 import com.sportflow.competition.dto.*;
 import com.sportflow.competition.entity.*;
 import com.sportflow.competition.exception.*;
@@ -22,11 +24,14 @@ public class CompetitionService {
 
     private final CompetitionRepository competitionRepository;
     private final RegistrationRepository registrationRepository;
+    private final EligibilityClient eligibilityClient;
 
     public CompetitionService(CompetitionRepository competitionRepository,
-                              RegistrationRepository registrationRepository) {
+                              RegistrationRepository registrationRepository,
+                              EligibilityClient eligibilityClient) {
         this.competitionRepository = competitionRepository;
         this.registrationRepository = registrationRepository;
+        this.eligibilityClient = eligibilityClient;
     }
 
     @Transactional(readOnly = true)
@@ -100,13 +105,13 @@ public class CompetitionService {
             throw new DuplicateRegistrationException("Athlete " + request.athleteId() + " is already registered for this competition");
         }
 
-        // Rule 3: Respect maxParticipants (considering accepted or pending participants)
+        // Rule 3: Respect maxParticipants
         long currentCount = registrationRepository.countByCompetitionIdAndStatusNot(competitionId, RegistrationStatus.REJECTED);
         if (currentCount >= competition.getMaxParticipants()) {
             throw new CompetitionFullException("Competition has reached max capacity of " + competition.getMaxParticipants());
         }
 
-        // Save registration as PENDING
+        // Save registration initially as PENDING
         Registration registration = new Registration();
         registration.setCompetitionId(competitionId);
         registration.setAthleteId(request.athleteId());
@@ -118,9 +123,46 @@ public class CompetitionService {
         registration.setRejectionReason(null);
         registration.setCreatedAt(Instant.now());
 
-        Registration saved = registrationRepository.save(registration);
-        log.info("Athlete {} registered with pending status, registrationId: {}", request.athleteId(), saved.getId());
-        return toRegistrationResponse(saved);
+        Registration saved = registrationRepository.saveAndFlush(registration);
+        log.info("Athlete {} registration saved as PENDING, registrationId: {}", request.athleteId(), saved.getId());
+
+        // Perform gRPC Eligibility Check
+        try {
+            EligibilityCheckResult eligibilityResult = eligibilityClient.checkEligibility(
+                    request.athleteId(),
+                    competitionId,
+                    request.athleteAge(),
+                    request.athleteWeight(),
+                    request.licenseNumber(),
+                    request.category()
+            );
+
+            if (eligibilityResult.eligible()) {
+                saved.setStatus(RegistrationStatus.ACCEPTED);
+                saved.setRejectionReason(null);
+                log.info("Eligibility check passed for athlete {}, registration {} ACCEPTED", request.athleteId(), saved.getId());
+            } else {
+                saved.setStatus(RegistrationStatus.REJECTED);
+                saved.setRejectionReason(eligibilityResult.reason());
+                log.info("Eligibility check failed for athlete {}, registration {} REJECTED: {}",
+                        request.athleteId(), saved.getId(), eligibilityResult.reason());
+            }
+
+            saved = registrationRepository.save(saved);
+            return toRegistrationResponse(saved);
+
+        } catch (EligibilityServiceUnavailableException ex) {
+            log.error("Eligibility service unavailable for registration {}. Keeping status PENDING.", saved.getId());
+            saved.setStatus(RegistrationStatus.PENDING);
+            saved.setRejectionReason("ELIGIBILITY_SERVICE_UNAVAILABLE");
+            registrationRepository.save(saved);
+
+            throw new EligibilityServiceUnavailableException(
+                    "Eligibility service is unavailable. Registration retained as PENDING.",
+                    ex,
+                    saved.getId()
+            );
+        }
     }
 
     @Transactional(readOnly = true)
