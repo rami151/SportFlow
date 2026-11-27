@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://sportflow.com/federation"
+    targetNamespace="http://sportflow.com/federation"
+    name="FederationService">
+
+    <types>
+        <xs:schema>
+            <xs:import
+                namespace="http://sportflow.com/federation"
+                schemaLocation="federation.xsd"/>
+        </xs:schema>
+    </types>
+
+    <message name="VerifyLicenseInput">
+        <part name="parameters" element="tns:VerifyLicenseRequest"/>
+    </message>
+    <message name="VerifyLicenseOutput">
+        <part name="parameters" element="tns:VerifyLicenseResponse"/>
+    </message>
+    <message name="GetFederalInfoInput">
+        <part name="parameters" element="tns:GetFederalInfoRequest"/>
+    </message>
+    <message name="GetFederalInfoOutput">
+        <part name="parameters" element="tns:GetFederalInfoResponse"/>
+    </message>
+    <message name="LicenseNotFoundFaultMessage">
+        <part name="fault" element="tns:LicenseNotFoundFault"/>
+    </message>
+
+    <portType name="FederationPortType">
+        <operation name="VerifyLicense">
+            <input message="tns:VerifyLicenseInput"/>
+            <output message="tns:VerifyLicenseOutput"/>
+            <fault name="LicenseNotFoundFault"
+                   message="tns:LicenseNotFoundFaultMessage"/>
+        </operation>
+        <operation name="GetFederalInfo">
+            <input message="tns:GetFederalInfoInput"/>
+            <output message="tns:GetFederalInfoOutput"/>
+        </operation>
+    </portType>
+
+    <binding name="FederationBinding" type="tns:FederationPortType">
+        <soap:binding
+            style="document"
+            transport="http://schemas.xmlsoap.org/soap/http"/>
+
+        <operation name="VerifyLicense">
+            <soap:operation
+                soapAction="http://sportflow.com/federation/VerifyLicense"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+            <fault name="LicenseNotFoundFault">
+                <soap:fault name="LicenseNotFoundFault" use="literal"/>
+            </fault>
+        </operation>
+
+        <operation name="GetFederalInfo">
+            <soap:operation
+                soapAction="http://sportflow.com/federation/GetFederalInfo"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+    </binding>
+
+    <service name="FederationService">
+        <port name="FederationPort" binding="tns:FederationBinding">
+            <soap:address location="http://localhost:8085/ws"/>
+        </port>
+    </service>
+</definitions>
