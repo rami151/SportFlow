@@ -1,0 +1,19 @@
+server:
+  port: ${PORT:8086}
+
+spring:
+  application:
+    name: eligibility-service
+
+grpc:
+  server:
+    port: ${GRPC_PORT:9096}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
