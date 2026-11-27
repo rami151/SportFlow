@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://sportflow.com/federation"
+    xmlns:tns="http://sportflow.com/federation"
+    elementFormDefault="qualified">
+
+    <!-- Verify License Request -->
+    <xs:element name="VerifyLicenseRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="licenseNumber"
+                            type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Verify License Response -->
+    <xs:element name="VerifyLicenseResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="valid"
+                            type="xs:boolean"/>
+                <xs:element name="status"
+                            type="xs:string"/>
+                <xs:element name="athleteName"
+                            type="xs:string"/>
+                <xs:element name="expirationDate"
+                            type="xs:date"
+                            minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Federal Information Request -->
+    <xs:element name="GetFederalInfoRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="federationCode"
+                            type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Federal Information Response -->
+    <xs:element name="GetFederalInfoResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="federationName"
+                            type="xs:string"/>
+                <xs:element name="country"
+                            type="xs:string"/>
+                <xs:element name="email"
+                            type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- SOAP Fault -->
+    <xs:element name="LicenseNotFoundFault">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="errorCode"
+                            type="xs:string"/>
+                <xs:element name="message"
+                            type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>
